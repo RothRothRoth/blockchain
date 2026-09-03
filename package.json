@@ -6,16 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:schema": "node --env-file=.env.local scripts/apply-schema.mjs",
+    "db:seed": "node --env-file=.env.local scripts/seed.mjs",
+    "db:create-org": "node --env-file=.env.local scripts/create-org.mjs"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "next": "16.3.4",
+    "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
