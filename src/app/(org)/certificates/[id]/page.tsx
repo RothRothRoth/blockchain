@@ -1,22 +1,40 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { VerificationQrCode } from "@/components/certificates/VerificationQrCode";
-import { getCertificateById } from "@/lib/db/certificates";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { certificateBelongsToOrganization, getCertificateById } from "@/lib/db/certificates";
 import { getCertificateStatus } from "@/lib/certificate-status";
 import { generateQrCodeDataUrl } from "@/lib/qrcode";
 import { CertificateActions } from "./CertificateActions";
 import { formatDate, formatDateTime } from "@/lib/format";
+
+// Revoke, Reactivate and Resend run as Server Actions from this page and wait
+// on a blockchain confirmation or an email, so give them more than the default.
+export const maxDuration = 60;
 
 export default async function CertificateDetailsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) redirect("/login");
+
   const { id } = await params;
   const certificate = await getCertificateById(id);
-  if (!certificate) notFound();
+  // A certificate that belongs to another institute looks exactly like one
+  // that doesn't exist: this page shows the recipient's email address.
+  if (
+    !certificate ||
+    !(await certificateBelongsToOrganization(
+      certificate.certificateId,
+      currentUser.organization.organizationId
+    ))
+  ) {
+    notFound();
+  }
 
   const status = getCertificateStatus(certificate);
   const qrDataUrl = await generateQrCodeDataUrl(certificate.verificationUrl);

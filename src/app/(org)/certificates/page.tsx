@@ -3,6 +3,9 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { listCertificatesByOrganization } from "@/lib/db/certificates";
 import { IssuedCertificatesClient } from "./IssuedCertificatesClient";
 
+// The inline Revoke / Reactivate actions on this page wait on the blockchain.
+export const maxDuration = 60;
+
 export default async function IssuedCertificatesPage() {
   const currentUser = await getCurrentUser();
   if (!currentUser) redirect("/login");

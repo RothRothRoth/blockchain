@@ -42,10 +42,16 @@ export async function verifyCertificateOnChain(
       error: matched ? null : "The on-chain record does not match the database record.",
     };
   } catch (err) {
+    // The raw error can contain the RPC URL and its API key, so it is only
+    // logged here and never shown on this public page.
+    console.error(
+      `[blockchain] Lookup failed for certificate ${certificate.certificateId}:`,
+      err instanceof Error ? err.message : err
+    );
     return {
       matched: false,
       onChainRevoked: null,
-      error: `Blockchain lookup failed: ${err instanceof Error ? err.message : "unknown error"}.`,
+      error: "The blockchain could not be reached right now, so this record couldn't be confirmed on-chain.",
     };
   }
 }

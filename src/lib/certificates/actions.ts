@@ -15,6 +15,7 @@ import { contractService } from "../blockchain/contract-service";
 import { getCertificateStatus } from "../certificate-status";
 import { isValidEmail, EmailResult } from "../email/certificate-email";
 import { emailCertificateToRecipient } from "./delivery";
+import { buildVerificationUrl, getBaseUrl } from "./verification-url";
 
 export interface EmailDeliveryOutcome {
   sent: boolean;
@@ -34,6 +35,22 @@ export interface IssueCertificateState {
 }
 
 const EMAIL_FAILED_FALLBACK = "The email could not be sent.";
+
+/**
+ * The id comes from the client, so it is only a lookup key: the certificate
+ * is returned only if it belongs to the signed-in organization. One that
+ * belongs to someone else is indistinguishable from one that doesn't exist,
+ * so ids can't be probed.
+ */
+async function findOwnedCertificate(certificateId: string, organizationId: string) {
+  if (typeof certificateId !== "string" || certificateId.length === 0 || certificateId.length > 64) {
+    return null;
+  }
+  const certificate = await getCertificateById(certificateId);
+  if (!certificate) return null;
+  const owned = await certificateBelongsToOrganization(certificate.certificateId, organizationId);
+  return owned ? certificate : null;
+}
 
 function toEmailOutcome(result: EmailResult, recipient: string): EmailDeliveryOutcome {
   return result.ok
@@ -67,12 +84,18 @@ async function emailIssuedCertificate(
 }
 
 function verificationUrlFor(certificateId: string): string {
-  const base = process.env.APP_BASE_URL ?? "http://localhost:3000";
-  return `${base}/verify/${certificateId}`;
+  // issueCertificate checks getBaseUrl() before anything is saved.
+  return buildVerificationUrl(certificateId) as string;
 }
 
+/**
+ * Provider errors can embed the RPC URL, and with it the provider's API key,
+ * so the detail only goes to the server log; the message returned to the
+ * browser never includes it.
+ */
 function blockchainErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "Unknown blockchain error.";
+  console.error("[blockchain] Transaction failed:", err instanceof Error ? err.message : err);
+  return "the blockchain network could not be reached or rejected the transaction";
 }
 
 export async function issueCertificate(
@@ -82,6 +105,13 @@ export async function issueCertificate(
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     return { error: "You must be signed in to issue a certificate." };
+  }
+  if (!getBaseUrl()) {
+    console.error("[config] APP_BASE_URL is not set, so verification links can't be created.");
+    return {
+      error:
+        "This server isn't fully configured (its public address is missing), so no certificate was issued. Please contact the administrator.",
+    };
   }
 
   const recipientName = String(formData.get("recipientName") ?? "").trim();
@@ -184,18 +214,11 @@ export async function resendCertificateEmail(certificateId: string): Promise<Res
     return { ok: false, message: "Certificate not found." };
   }
 
-  // The id comes from the client, so it is only a lookup key: ownership is
-  // checked against the signed-in organization before anything is sent. A
-  // certificate that belongs to someone else gets the same "not found"
-  // answer as one that doesn't exist, so ids can't be probed.
-  const certificate = await getCertificateById(certificateId);
-  if (
-    !certificate ||
-    !(await certificateBelongsToOrganization(
-      certificate.certificateId,
-      currentUser.organization.organizationId
-    ))
-  ) {
+  const certificate = await findOwnedCertificate(
+    certificateId,
+    currentUser.organization.organizationId
+  );
+  if (!certificate) {
     return { ok: false, message: "Certificate not found." };
   }
 
@@ -220,7 +243,10 @@ export async function revokeCertificate(certificateId: string): Promise<RevokeRe
     return { error: "You must be signed in to revoke a certificate." };
   }
 
-  const certificate = await getCertificateById(certificateId);
+  const certificate = await findOwnedCertificate(
+    certificateId,
+    currentUser.organization.organizationId
+  );
   if (!certificate) {
     return { error: "Certificate not found." };
   }
@@ -266,7 +292,10 @@ export async function reactivateCertificate(certificateId: string): Promise<Reac
     return { error: "You must be signed in to reactivate a certificate." };
   }
 
-  const certificate = await getCertificateById(certificateId);
+  const certificate = await findOwnedCertificate(
+    certificateId,
+    currentUser.organization.organizationId
+  );
   if (!certificate) {
     return { error: "Certificate not found." };
   }

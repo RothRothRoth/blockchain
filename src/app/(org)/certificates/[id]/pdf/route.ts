@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { getCertificateById } from "@/lib/db/certificates";
+import { certificateBelongsToOrganization, getCertificateById } from "@/lib/db/certificates";
 import { generateQrCodeDataUrl } from "@/lib/qrcode";
 import { generateCertificatePdf } from "@/lib/pdf/certificate-pdf";
 
@@ -15,7 +15,13 @@ export async function GET(
 
   const { id } = await params;
   const certificate = await getCertificateById(id);
-  if (!certificate) {
+  if (
+    !certificate ||
+    !(await certificateBelongsToOrganization(
+      certificate.certificateId,
+      currentUser.organization.organizationId
+    ))
+  ) {
     return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
   }
 

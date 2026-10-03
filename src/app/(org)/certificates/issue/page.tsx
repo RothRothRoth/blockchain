@@ -4,6 +4,10 @@ import { generateNextCertificateNumber } from "@/lib/db/certificates";
 import { isSharedEmailConfigured } from "@/lib/email/certificate-email";
 import { IssueCertificateForm } from "./IssueCertificateForm";
 
+// Issuing waits for a blockchain confirmation and then sends the email, which
+// can take well over the default limit on a real network.
+export const maxDuration = 60;
+
 export default async function IssueCertificatePage() {
   const currentUser = await getCurrentUser();
   if (!currentUser) redirect("/login");

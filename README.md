@@ -217,3 +217,46 @@ RESEND_FROM_EMAIL=
   certificate to that address is enough to show the full flow.
 - If the variables are missing or Resend rejects the send, issuing still works;
   the page reports that the email was not sent and offers a resend button.
+
+## Deploying to Vercel
+
+The app is a standard Next.js project, so Vercel builds it with no extra
+configuration. Three things are not Vercel-hosted and must exist first.
+
+1. **A hosted PostgreSQL database** (Neon, Supabase, Vercel Postgres, ...). Use
+   its connection string, with `?sslmode=require` if the provider needs SSL.
+   Create the tables **once** against that empty database (the schema script
+   drops tables first, so never run it against a database that has data):
+   ```bash
+   DATABASE_URL="postgresql://..." node scripts/apply-schema.mjs
+   ```
+2. **A public blockchain network** (for example Sepolia). The local Hardhat node
+   can't be reached from Vercel. Deploy the contract with
+   `onchain/hardhat.config.js` (its `sepolia` network reads `SEPOLIA_RPC_URL`
+   and `DEPLOYER_PRIVATE_KEY`), and fund the wallet that will sign transactions
+   with test ETH from a faucet.
+3. **An email sender** (see Email Setup above): a Gmail App Password is enough.
+
+Then add these in **Vercel -> Project -> Settings -> Environment Variables**:
+
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | the hosted database connection string |
+| `SESSION_SECRET` | a new random value (never reuse your local one) |
+| `APP_BASE_URL` | your live URL, e.g. `https://your-app.vercel.app` |
+| `BLOCKCHAIN_RPC_URL` | the network's RPC URL |
+| `BLOCKCHAIN_PRIVATE_KEY` | the funded wallet's key (a real secret; never commit it) |
+| `BLOCKCHAIN_CONTRACT_ADDRESS` | the address printed when you deployed |
+| `SMTP_USER`, `SMTP_PASS` | the sending Gmail address and its App Password |
+| `REGISTRATION_INVITE_CODE` | optional; see below |
+
+Notes:
+
+- **Registration is closed in production unless you set `REGISTRATION_INVITE_CODE`.**
+  Create the first institution from your own machine, pointed at the hosted
+  database: `DATABASE_URL="postgresql://..." node scripts/create-org.mjs "Institute Name" "org@institute.edu" "Your Name" "you@institute.edu" "a-strong-password"`.
+- Issuing, revoking and reactivating wait for a blockchain confirmation, so those
+  pages ask for up to 60 seconds. Vercel's plan limits apply to that.
+- Blockchain error details are written to the server log only; visitors see a
+  generic message, because provider errors can contain the RPC URL and its key.
+- Changing an environment variable on Vercel needs a redeploy to take effect.

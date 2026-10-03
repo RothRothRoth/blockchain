@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { getUserByEmail, createUser } from "../db/users";
 import { getOrganizationByEmail, createOrganization } from "../db/organizations";
 import { createSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "./session";
+import { getRegistrationMode, isInviteCodeValid } from "./registration";
 
 async function startSession(userId: string, organizationId: string): Promise<void> {
   const token = createSessionToken(userId, organizationId);
@@ -66,6 +67,14 @@ export async function registerOrganization(
   _prevState: RegisterState,
   formData: FormData
 ): Promise<RegisterState> {
+  const mode = getRegistrationMode();
+  if (mode === "closed") {
+    return { error: "Registration is closed. Institutions are set up by the administrator." };
+  }
+  if (mode === "invite" && !isInviteCodeValid(String(formData.get("inviteCode") ?? "").trim())) {
+    return { error: "That invitation code isn't valid." };
+  }
+
   const organizationName = String(formData.get("organizationName") ?? "").trim();
   const organizationEmail = String(formData.get("organizationEmail") ?? "")
     .trim()

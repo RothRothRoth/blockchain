@@ -1,6 +1,7 @@
 import { pool } from "./pool";
 import { PoolClient } from "pg";
 import { ActivityEvent, Certificate, DashboardStats } from "../types";
+import { buildVerificationUrl } from "../certificates/verification-url";
 
 const SELECT_CERTIFICATE = `
   SELECT
@@ -46,7 +47,10 @@ function mapRow(row: Record<string, unknown>): Certificate {
     expirationDate: row.expiration_date ? toIsoDate(row.expiration_date) : null,
     revokedAt: row.revoked_at ? (row.revoked_at as Date).toISOString() : null,
     createdAt: (row.created_at as Date).toISOString(),
-    verificationUrl: (row.verification_url as string) ?? "",
+    // Built from the current server address so links stay correct if the app
+    // moves domain; the stored value is only a fallback.
+    verificationUrl:
+      buildVerificationUrl(row.certificate_id as string) ?? (row.verification_url as string) ?? "",
     blockchain: {
       transactionHash: (row.transaction_hash as string) ?? "",
       blockchainCertId: (row.blockchain_cert_id as string) ?? "",
