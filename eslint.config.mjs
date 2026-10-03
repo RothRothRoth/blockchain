@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Isolated Hardhat project — its own CommonJS/JS conventions, not
+    // subject to the app's TypeScript-oriented lint rules.
+    "onchain/**",
   ]),
 ]);
 

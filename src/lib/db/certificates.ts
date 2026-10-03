@@ -85,16 +85,38 @@ export async function listCertificatesByOrganization(
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function getCertificateById(certificateId: string): Promise<Certificate | null> {
-  // certificate_id is a uuid column; a malformed id (e.g. a mistyped public
-  // lookup) would otherwise throw a Postgres "invalid input syntax" error.
-  if (!UUID_PATTERN.test(certificateId)) return null;
+/**
+ * Looks up a certificate by its internal UUID (certificate_id) or by the
+ * human-readable number printed on the certificate itself
+ * (certificate_number, e.g. "MTI-2026-00200"). A real verifier only ever
+ * sees the printed number — the UUID is an internal identifier that shows
+ * up in links and QR codes, not something anyone would type from memory.
+ */
+export async function getCertificateById(idOrNumber: string): Promise<Certificate | null> {
+  const trimmed = idOrNumber.trim();
+  if (!trimmed) return null;
 
-  const { rows } = await pool.query(`${SELECT_CERTIFICATE} WHERE c.certificate_id = $1`, [
-    certificateId,
-  ]);
+  // certificate_id is a uuid column; passing a non-uuid string to it would
+  // throw a Postgres "invalid input syntax" error, so route by shape.
+  const { rows } = await pool.query(
+    UUID_PATTERN.test(trimmed)
+      ? `${SELECT_CERTIFICATE} WHERE c.certificate_id = $1`
+      : `${SELECT_CERTIFICATE} WHERE c.certificate_number = $1`,
+    [trimmed]
+  );
   if (rows.length === 0) return null;
   return mapRow(rows[0]);
+}
+
+export async function certificateBelongsToOrganization(
+  certificateId: string,
+  organizationId: string
+): Promise<boolean> {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM certificate WHERE certificate_id = $1 AND organization_id = $2`,
+    [certificateId, organizationId]
+  );
+  return rows.length > 0;
 }
 
 /**
@@ -158,6 +180,52 @@ export async function getDashboardStats(organizationId: string): Promise<Dashboa
     expired: row.expired,
     revoked: row.revoked,
   };
+}
+
+const ORG_PREFIX_STOPWORDS = new Set(["of", "the", "and", "for", "a", "an"]);
+
+export function deriveOrgPrefix(organizationName: string): string {
+  const words = organizationName
+    .split(/\s+/)
+    .filter((word) => word && !ORG_PREFIX_STOPWORDS.has(word.toLowerCase()));
+
+  let prefix = words
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+
+  if (prefix.length < 2) {
+    prefix = (words[0] ?? organizationName).replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase();
+  }
+
+  return prefix.slice(0, 4) || "CERT";
+}
+
+/**
+ * Suggests the next certificate number for an organization, scoped by org +
+ * year (e.g. "MTI-2026-00003"). This is a suggestion for the issue form to
+ * pre-fill, not a reservation — the actual uniqueness guarantee is the
+ * database's UNIQUE constraint on certificate_number, checked at insert time.
+ *
+ * If the organization has set a custom certificate_prefix (settings page),
+ * that's used as-is instead of guessing one from organization_name — some
+ * institutions need their numbers to match an existing registry or
+ * accreditation scheme.
+ */
+export async function generateNextCertificateNumber(
+  organizationId: string,
+  organizationName: string,
+  certificatePrefix?: string | null
+): Promise<string> {
+  const prefix = certificatePrefix?.trim() || deriveOrgPrefix(organizationName);
+  const year = new Date().getFullYear();
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS count FROM certificate
+     WHERE organization_id = $1 AND certificate_number LIKE $2`,
+    [organizationId, `${prefix}-${year}-%`]
+  );
+  const nextSequence = (rows[0]?.count ?? 0) + 1;
+  return `${prefix}-${year}-${String(nextSequence).padStart(5, "0")}`;
 }
 
 export interface IssueCertificateInput {
@@ -240,4 +308,48 @@ export async function markCertificateRevoked(certificateId: string): Promise<voi
     `UPDATE certificate SET revoked_at = now() WHERE certificate_id = $1 AND revoked_at IS NULL`,
     [certificateId]
   );
+}
+
+export async function markCertificateReactivated(certificateId: string): Promise<void> {
+  await pool.query(
+    `UPDATE certificate SET revoked_at = NULL WHERE certificate_id = $1 AND revoked_at IS NOT NULL`,
+    [certificateId]
+  );
+}
+
+/**
+ * Compensating rollback for the issue flow: if the blockchain transaction
+ * fails after the certificate row is already committed to PostgreSQL, this
+ * removes it (and its now-unreferenced recipient row) so nothing is left
+ * half-issued — a certificate must never exist in the app without a real
+ * confirmed blockchain_transaction behind it.
+ */
+export async function deleteCertificateRecord(certificateId: string): Promise<void> {
+  const client: PoolClient = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { rows } = await client.query(
+      `SELECT recipient_id FROM certificate WHERE certificate_id = $1`,
+      [certificateId]
+    );
+    const recipientId = rows[0]?.recipient_id as string | undefined;
+
+    await client.query(`DELETE FROM certificate WHERE certificate_id = $1`, [certificateId]);
+
+    if (recipientId) {
+      await client.query(
+        `DELETE FROM recipient
+         WHERE recipient_id = $1 AND recipient_id NOT IN (SELECT recipient_id FROM certificate)`,
+        [recipientId]
+      );
+    }
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }

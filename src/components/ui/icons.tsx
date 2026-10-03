@@ -46,6 +46,20 @@ export function ArrowRightIcon({ className = "h-4 w-4" }: { className?: string }
   );
 }
 
+export function ArrowLeftIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none">
+      <path
+        d="M19 12H5M11 18l-6-6 6-6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function CheckCircleIcon({ className = "h-4 w-4 text-teal-700" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none">

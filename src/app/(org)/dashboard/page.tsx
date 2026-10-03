@@ -22,6 +22,7 @@ import {
 } from "@/lib/db/certificates";
 import { getCertificateStatus } from "@/lib/certificate-status";
 import { formatRelativeTime } from "@/lib/format";
+import { generateQrCodeDataUrl } from "@/lib/qrcode";
 import { DashboardStats } from "@/lib/types";
 
 const STAT_CARDS: {
@@ -76,27 +77,33 @@ export default async function DashboardPage() {
     getRecentActivity(organizationId, 6),
   ]);
   const latest = certificates[0] ?? null;
+  const latestQr = latest?.verificationUrl
+    ? await generateQrCodeDataUrl(latest.verificationUrl)
+    : undefined;
 
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm text-slate-500">{getGreeting()},</p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
+        <p className="text-sm font-semibold text-teal-800">{getGreeting()},</p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">
           {currentUser.organization.organizationName}
         </h1>
         <span className="mt-2 block h-1 w-10 rounded bg-teal-600" />
-        <p className="mt-3 text-sm text-slate-500">Here&apos;s your overview for today.</p>
+        <p className="mt-3 text-sm font-medium text-slate-700">Here&apos;s your overview for today.</p>
       </div>
 
       {latest ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="rounded-2xl bg-gradient-to-br from-teal-800 via-teal-900 to-emerald-950 p-6 shadow-lg lg:col-span-2">
-            <div className="mx-auto max-w-xs rounded-xl bg-white p-4 shadow-xl">
+            <div className="mx-auto max-w-xl overflow-hidden rounded-lg shadow-xl">
               <CertificateMockup
                 recipientName={latest.recipientName}
                 certificateTitle={latest.certificateTitle}
                 organizationName={latest.organizationName}
                 certificateNumber={latest.certificateNumber}
+                issuedBy={latest.issuedBy}
+                issueDate={latest.issueDate}
+                qrDataUrl={latestQr}
               />
             </div>
           </div>

@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { deriveOrgPrefix } from "@/lib/db/certificates";
+import { CertificatePrefixForm } from "./CertificatePrefixForm";
+import { isSharedEmailConfigured } from "@/lib/email/certificate-email";
+import { EmailAccountForm } from "./EmailAccountForm";
 
 export default async function SettingsPage() {
   const currentUser = await getCurrentUser();
@@ -19,7 +23,7 @@ export default async function SettingsPage() {
         <CardHeader>
           <CardTitle>Institution</CardTitle>
         </CardHeader>
-        <CardBody>
+        <CardBody className="space-y-6">
           <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -36,6 +40,25 @@ export default async function SettingsPage() {
               <dd className="mt-1 text-sm text-slate-900">{currentUser.organization.email}</dd>
             </div>
           </dl>
+
+          <div className="border-t border-slate-200 pt-4">
+            <CertificatePrefixForm
+              currentPrefix={currentUser.organization.certificatePrefix}
+              derivedPrefix={deriveOrgPrefix(currentUser.organization.organizationName)}
+            />
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Email Delivery</CardTitle>
+        </CardHeader>
+        <CardBody>
+          <EmailAccountForm
+            connectedUser={currentUser.organization.mailUser}
+            sharedEmail={isSharedEmailConfigured()}
+          />
         </CardBody>
       </Card>
 
@@ -62,7 +85,8 @@ export default async function SettingsPage() {
       </Card>
 
       <p className="text-center text-xs text-slate-400">
-        Editing these details isn&apos;t wired up yet. This page is read-only for now.
+        Everything above except the certificate number prefix and email delivery is read-only
+        for now. Editing those isn&apos;t wired up yet.
       </p>
     </div>
   );

@@ -142,4 +142,78 @@ database or the blockchain directly; every request goes through the web app.
 | Public verification | Real, reads live data |
 | PDF download | Disabled — PDF generation not built yet |
 | QR code image | Decorative placeholder — not a scannable code |
-| Email notification | Not built yet |
+| Email delivery | Real, via Resend: the certificate PDF and verification link are emailed after issuance (see **Email Setup**) |
+
+## Email Setup
+
+After a certificate is issued, the recipient is emailed the certificate PDF
+(attached) together with the certificate ID and a public verification link.
+Email is a delivery step only: if it fails, the certificate stays issued in
+PostgreSQL and on the blockchain, and it can be re-sent from the certificate's
+detail page ("Resend Certificate").
+
+### Recommended: each institute connects its own Gmail (no `.env` changes)
+
+Log in, open **Settings → Email Delivery**, and connect the institute's Gmail
+account. Certificates are then sent from that Gmail address, under the
+institute's name, to any applicant.
+
+1. Turn on **2-Step Verification** on the Gmail account (Google requires it).
+2. Create an **App Password** at myaccount.google.com/apppasswords (16 letters;
+   a separate password, not the normal one).
+3. Enter the Gmail address and App Password in Settings and click **Connect Gmail**.
+   The login is checked with Google before anything is saved, and the App Password
+   is stored encrypted (AES-256-GCM, key derived from `SESSION_SECRET`) and never
+   shown again. If you ever change `SESSION_SECRET`, reconnect the account.
+
+Each institute has its own account, so one institute can't send as another.
+Gmail limits sending to roughly 500 messages per day per account.
+
+### Server-wide fallback (optional)
+
+If an institute hasn't connected an account, the server falls back to the
+settings below: SMTP if `SMTP_USER` and `SMTP_PASS` are set, otherwise Resend.
+Restart `npm run dev` after editing `.env.local`. In every case, make sure
+`APP_BASE_URL` is the app's public URL: the verification link in the email is
+built from it. It is `http://localhost:3000` in local development, so links in
+those emails only open on your own machine.
+
+### Option A: Gmail SMTP for the whole server
+
+1. In your Google account, turn on **2-Step Verification**.
+2. Create an **App Password** at myaccount.google.com/apppasswords (16 letters).
+3. Add to `.env.local` (server-side only; never commit it):
+
+```
+SMTP_USER=you@gmail.com
+SMTP_PASS=abcd efgh ijkl mnop
+```
+
+Mail is sent from that Gmail account, so recipients see it as coming from you.
+Gmail limits sending to roughly 500 messages per day. `SMTP_HOST`, `SMTP_PORT`
+and `SMTP_FROM` are optional and default to `smtp.gmail.com`, `465` and
+`Certi <SMTP_USER>`; set them to use a different SMTP provider.
+
+### Option B: Resend
+
+1. Create a free account at [resend.com](https://resend.com).
+2. In the Resend dashboard, create an API key (**API Keys**).
+3. Add it to `.env.local` as `RESEND_API_KEY` (server-side only; never commit it).
+4. Set `RESEND_FROM_EMAIL` to the sender address, e.g.
+   `Certi <certificates@your-verified-domain.com>`.
+
+```
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=
+```
+
+**Limits of the Resend account you use:**
+
+- To email arbitrary recipients you must add and verify a sending domain in Resend
+  and use an address on that domain in `RESEND_FROM_EMAIL`.
+- Without a verified domain, Resend only allows its shared test sender
+  (`onboarding@resend.dev`) and only delivers to the email address your Resend
+  account was registered with. For a university demonstration, issuing a
+  certificate to that address is enough to show the full flow.
+- If the variables are missing or Resend rejects the send, issuing still works;
+  the page reports that the email was not sent and offers a resend button.

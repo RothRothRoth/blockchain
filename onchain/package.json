@@ -1,0 +1,20 @@
+{
+  "name": "certi-onchain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Isolated Hardhat project for the CertificateRegistry smart contract. Kept separate from the Next.js app's package.json so blockchain tooling never touches the app's build.",
+  "scripts": {
+    "compile": "hardhat compile",
+    "node": "hardhat node",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "test": "hardhat test",
+    "sync-abi": "node scripts/sync-abi.js"
+  },
+  "devDependencies": {
+    "hardhat": "^2.22.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0"
+  },
+  "dependencies": {
+    "ethers": "^6.13.0"
+  }
+}

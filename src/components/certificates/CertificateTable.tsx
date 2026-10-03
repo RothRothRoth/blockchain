@@ -11,6 +11,7 @@ interface CertificateTableProps {
   certificates: Certificate[];
   showActions?: boolean;
   onRevoke?: (certificateId: string) => void;
+  onReactivate?: (certificateId: string) => void;
   emptyMessage?: string;
 }
 
@@ -18,6 +19,7 @@ export function CertificateTable({
   certificates,
   showActions = true,
   onRevoke,
+  onReactivate,
   emptyMessage = "No certificates found.",
 }: CertificateTableProps) {
   if (certificates.length === 0) {
@@ -30,62 +32,70 @@ export function CertificateTable({
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-slate-200 text-xs font-medium uppercase tracking-wide text-slate-500">
-            <th className="px-5 py-3">Certificate ID</th>
-            <th className="px-5 py-3">Recipient</th>
-            <th className="px-5 py-3">Title</th>
-            <th className="px-5 py-3">Issue Date</th>
-            <th className="px-5 py-3">Expiration Date</th>
-            <th className="px-5 py-3">Status</th>
-            {showActions && <th className="px-5 py-3">Actions</th>}
+          <tr className="border-b border-slate-200 bg-slate-50/75 text-xs font-bold uppercase tracking-wider text-slate-700">
+            <th className="px-5 py-3.5">Certificate ID</th>
+            <th className="px-5 py-3.5">Recipient</th>
+            <th className="px-5 py-3.5">Title</th>
+            <th className="px-5 py-3.5">Issue Date</th>
+            <th className="px-5 py-3.5">Expiration Date</th>
+            <th className="px-5 py-3.5">Status</th>
+            {showActions && <th className="px-5 py-3.5">Actions</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
           {certificates.map((cert) => {
             const status = getCertificateStatus(cert);
             return (
-              <tr key={cert.certificateId} className="hover:bg-slate-50">
-                <td className="whitespace-nowrap px-5 py-3 font-mono text-xs text-slate-600">
+              <tr key={cert.certificateId} className="hover:bg-slate-50/80 transition-colors">
+                <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs font-semibold text-slate-800">
                   {cert.certificateNumber}
                 </td>
-                <td className="whitespace-nowrap px-5 py-3 text-slate-900">
+                <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-slate-950">
                   {cert.recipientName}
                 </td>
-                <td className="px-5 py-3 text-slate-700">{cert.certificateTitle}</td>
-                <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                <td className="px-5 py-3.5 font-medium text-slate-800">{cert.certificateTitle}</td>
+                <td className="whitespace-nowrap px-5 py-3.5 font-medium text-slate-700">
                   {formatDate(cert.issueDate)}
                 </td>
-                <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                <td className="whitespace-nowrap px-5 py-3.5 font-medium text-slate-700">
                   {formatDate(cert.expirationDate)}
                 </td>
-                <td className="whitespace-nowrap px-5 py-3">
+                <td className="whitespace-nowrap px-5 py-3.5">
                   <StatusBadge status={status} />
                 </td>
                 {showActions && (
-                  <td className="whitespace-nowrap px-5 py-3">
+                  <td className="whitespace-nowrap px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <Link
                         href={`/certificates/${cert.certificateId}`}
-                        className="text-sm font-medium text-teal-700 hover:text-teal-800"
+                        className="text-sm font-semibold text-teal-800 hover:text-teal-950 underline underline-offset-2"
                       >
                         View
                       </Link>
-                      <button
-                        type="button"
-                        disabled
-                        title="PDF download will be available once PDF generation is connected"
-                        className="text-sm font-medium text-slate-300 cursor-not-allowed"
+                      <a
+                        href={`/certificates/${cert.certificateId}/pdf`}
+                        className="text-sm font-semibold text-teal-800 hover:text-teal-950 underline underline-offset-2"
                       >
                         Download
-                      </button>
+                      </a>
                       {status !== "revoked" && onRevoke && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="!px-0 text-red-600 hover:bg-transparent hover:text-red-700"
+                          className="!px-0 font-semibold text-red-600 hover:bg-transparent hover:text-red-800"
                           onClick={() => onRevoke(cert.certificateId)}
                         >
                           Revoke
+                        </Button>
+                      )}
+                      {status === "revoked" && onReactivate && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="!px-0 font-semibold text-teal-700 hover:bg-transparent hover:text-teal-900"
+                          onClick={() => onReactivate(cert.certificateId)}
+                        >
+                          Reactivate
                         </Button>
                       )}
                     </div>

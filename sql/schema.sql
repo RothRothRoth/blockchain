@@ -15,6 +15,15 @@ CREATE TABLE organization (
   organization_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
+  -- Custom prefix for this org's certificate numbers (e.g. "RA-DIP"), set on
+  -- the settings page. NULL means "derive one from organization_name" — see
+  -- generateNextCertificateNumber in src/lib/db/certificates.ts.
+  certificate_prefix TEXT,
+  -- The institute's own Gmail account, used to email issued certificates.
+  -- mail_password_encrypted holds the App Password encrypted with AES-256-GCM
+  -- (see src/lib/security/secret-box.ts); it is never stored or sent in plain text.
+  mail_user TEXT,
+  mail_password_encrypted TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

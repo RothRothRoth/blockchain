@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonBaseClasses, variantClasses, sizeClasses } from "@/components/ui/Button";
 import { RevokeModal } from "@/components/certificates/RevokeModal";
-import { revokeCertificate } from "@/lib/certificates/actions";
+import { ResendEmailButton } from "@/components/certificates/ResendEmailButton";
+import { revokeCertificate, reactivateCertificate } from "@/lib/certificates/actions";
 import { Certificate, CertificateStatus } from "@/lib/types";
 
 export function CertificateActions({
@@ -16,6 +17,7 @@ export function CertificateActions({
 }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
+  const [reactivating, startReactivate] = useTransition();
   const [, startTransition] = useTransition();
 
   async function handleConfirm() {
@@ -24,16 +26,27 @@ export function CertificateActions({
     startTransition(() => router.refresh());
   }
 
+  function handleReactivate() {
+    startReactivate(async () => {
+      await reactivateCertificate(certificate.certificateId);
+      router.refresh();
+    });
+  }
+
   return (
-    <div className="flex items-center gap-3">
-      <Button
-        variant="secondary"
-        disabled
-        title="PDF download will be available once PDF generation is connected"
+    <div className="flex flex-wrap items-start gap-3">
+      <a
+        href={`/certificates/${certificate.certificateId}/pdf`}
+        className={`${buttonBaseClasses} ${variantClasses.secondary} ${sizeClasses.md}`}
       >
         Download PDF
-      </Button>
-      {status !== "revoked" && (
+      </a>
+      {status !== "revoked" && <ResendEmailButton certificateId={certificate.certificateId} />}
+      {status === "revoked" ? (
+        <Button variant="primary" onClick={handleReactivate} disabled={reactivating}>
+          {reactivating ? "Reactivating…" : "Reactivate Certificate"}
+        </Button>
+      ) : (
         <Button variant="danger" onClick={() => setConfirming(true)}>
           Revoke Certificate
         </Button>

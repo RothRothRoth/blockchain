@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { QrPlaceholder } from "@/components/certificates/QrPlaceholder";
+import { VerificationQrCode } from "@/components/certificates/VerificationQrCode";
 import { getCertificateById } from "@/lib/db/certificates";
 import { getCertificateStatus } from "@/lib/certificate-status";
+import { generateQrCodeDataUrl } from "@/lib/qrcode";
 import { CertificateActions } from "./CertificateActions";
 import { formatDate, formatDateTime } from "@/lib/format";
 
@@ -18,6 +19,7 @@ export default async function CertificateDetailsPage({
   if (!certificate) notFound();
 
   const status = getCertificateStatus(certificate);
+  const qrDataUrl = await generateQrCodeDataUrl(certificate.verificationUrl);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -25,14 +27,14 @@ export default async function CertificateDetailsPage({
         <div>
           <Link
             href="/certificates"
-            className="text-sm text-slate-500 hover:text-slate-700"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-teal-800 hover:text-teal-950 transition-colors"
           >
             ← Issued Certificates
           </Link>
-          <h1 className="mt-1 text-xl font-semibold text-slate-900">
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
             {certificate.certificateTitle}
           </h1>
-          <p className="mt-1 font-mono text-sm text-slate-500">
+          <p className="mt-1.5 inline-flex items-center font-mono text-xs font-semibold text-slate-800 bg-slate-100/90 px-2.5 py-0.5 rounded border border-slate-200">
             {certificate.certificateNumber}
           </p>
         </div>
@@ -90,7 +92,10 @@ export default async function CertificateDetailsPage({
           <CardTitle>Verification QR Code</CardTitle>
         </CardHeader>
         <CardBody className="flex justify-center">
-          <QrPlaceholder verificationUrl={certificate.verificationUrl} />
+          <VerificationQrCode
+            qrDataUrl={qrDataUrl}
+            verificationUrl={certificate.verificationUrl}
+          />
         </CardBody>
       </Card>
 
@@ -112,11 +117,11 @@ function Field({
 }) {
   return (
     <div className={wrap ? "sm:col-span-2" : undefined}>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+      <dt className="text-xs font-semibold uppercase tracking-wider text-slate-700">
         {label}
       </dt>
       <dd
-        className={`mt-1 text-sm text-slate-900 ${mono ? "font-mono" : ""} ${
+        className={`mt-1 text-sm font-semibold text-slate-950 ${mono ? "font-mono" : ""} ${
           wrap ? "break-all" : ""
         }`}
       >

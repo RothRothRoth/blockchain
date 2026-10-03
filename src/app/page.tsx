@@ -148,12 +148,7 @@ export default function HomePage() {
         <div className="relative mx-auto max-w-7xl px-6 pt-16 pb-16 lg:pt-20">
           <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
             <div>
-              <span className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-3.5 py-1.5 text-xs font-medium text-teal-800 ring-1 ring-inset ring-teal-600/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
-                Blockchain-Verified Digital Certificates
-              </span>
-
-              <h1 className="mt-6 text-5xl font-bold tracking-tight text-slate-900">
+              <h1 className="text-5xl font-bold tracking-tight text-slate-900">
                 Certificates you can trust.
                 <br />
                 <span className="text-teal-700">Verified in seconds.</span>
@@ -191,21 +186,26 @@ export default function HomePage() {
                 </LinkButton>
               </div>
 
-              <p className="mt-4 flex items-center gap-2 text-xs text-slate-400">
+              <Link
+                href="/verify"
+                className="mt-4 flex items-center gap-2 text-xs text-slate-400 hover:text-teal-700"
+              >
                 <QrIcon />
                 Have a QR code? Scan it to verify instantly.
-              </p>
+              </Link>
             </div>
 
             <div className="relative mx-auto w-full max-w-sm py-6 lg:max-w-none">
-              <div className="absolute right-2 top-8 hidden h-[380px] w-[280px] rotate-6 rounded-2xl bg-teal-800 sm:block" />
+              <div className="absolute right-2 top-8 hidden h-[285px] w-[380px] rotate-6 rounded-2xl bg-teal-800 sm:block" />
 
-              <div className="relative mx-auto w-[300px] rounded-2xl border border-slate-100 bg-white p-5 shadow-xl">
+              <div className="relative mx-auto w-[380px] max-w-full overflow-hidden rounded-xl border border-slate-100 bg-white shadow-xl">
                 <CertificateMockup
                   recipientName="John Doe"
                   certificateTitle="Web Development"
                   organizationName="Metro Technical Institute"
                   certificateNumber="CERT-2026-00128"
+                  issuedBy="Dr. Jane Smith"
+                  issueDate="2026-06-15"
                 />
               </div>
 
@@ -305,7 +305,7 @@ export default function HomePage() {
 
       <footer className="border-t border-slate-100 bg-slate-900 py-6">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-6 text-xs text-slate-400 sm:flex-row">
-          <span>© 2026 Certi, University Project</span>
+          <span>© 2026 Certi, Kirirom Institute of Technology</span>
           <span>Blockchain-Based Digital Certificate Issuing Platform</span>
         </div>
       </footer>

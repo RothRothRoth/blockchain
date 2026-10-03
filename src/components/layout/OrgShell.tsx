@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: GridIcon },
   { href: "/certificates", label: "Certificates", icon: ListIcon },
   { href: "/certificates/issue", label: "Issue Certificate", icon: FilePlusIcon },
-  { href: "/verify", label: "Verification", icon: ShieldIcon },
+  { href: "/verification", label: "Verification", icon: ShieldIcon },
 ];
 
 interface OrgShellProps {
@@ -29,7 +29,7 @@ export function OrgShell({ organizationName, children }: OrgShellProps) {
 
       <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 pt-4 sm:px-6 sm:pt-6">
         <Link href="/dashboard" className="flex shrink-0 items-center gap-2 justify-self-start">
-          <Logo size={38} />
+          <Logo size={46} />
           <span className="hidden text-base font-semibold tracking-tight text-slate-900 sm:inline">
             Certi
           </span>

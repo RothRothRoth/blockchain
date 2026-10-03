@@ -14,8 +14,8 @@ export default async function IssuedCertificatesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">Issued Certificates</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-950">Issued Certificates</h1>
+        <p className="mt-1 text-sm font-medium text-slate-700">
           All certificates issued by your organization.
         </p>
       </div>

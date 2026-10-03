@@ -8,7 +8,7 @@ import { CertificateTable } from "@/components/certificates/CertificateTable";
 import { RevokeModal } from "@/components/certificates/RevokeModal";
 import { getCertificateStatus } from "@/lib/certificate-status";
 import { Certificate, CertificateStatus } from "@/lib/types";
-import { revokeCertificate } from "@/lib/certificates/actions";
+import { revokeCertificate, reactivateCertificate } from "@/lib/certificates/actions";
 
 const STATUS_FILTERS: { value: CertificateStatus | "all"; label: string }[] = [
   { value: "all", label: "All Statuses" },
@@ -45,6 +45,13 @@ export function IssuedCertificatesClient({ certificates }: { certificates: Certi
     startTransition(() => router.refresh());
   }
 
+  function handleReactivate(certificateId: string) {
+    startTransition(async () => {
+      await reactivateCertificate(certificateId);
+      router.refresh();
+    });
+  }
+
   return (
     <>
       <Card>
@@ -58,7 +65,7 @@ export function IssuedCertificatesClient({ certificates }: { certificates: Certi
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as CertificateStatus | "all")}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
           >
             {STATUS_FILTERS.map((f) => (
               <option key={f.value} value={f.value}>
@@ -72,6 +79,7 @@ export function IssuedCertificatesClient({ certificates }: { certificates: Certi
           onRevoke={(id) =>
             setPendingRevoke(certificates.find((c) => c.certificateId === id) ?? null)
           }
+          onReactivate={handleReactivate}
         />
       </Card>
 

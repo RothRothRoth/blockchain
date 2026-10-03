@@ -3,9 +3,10 @@ import { PublicHeader } from "@/components/layout/PublicHeader";
 import { GradientBackdrop } from "@/components/layout/GradientBackdrop";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/Card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { LinkButton } from "@/components/ui/Button";
+import { LinkButton, buttonBaseClasses, variantClasses, sizeClasses } from "@/components/ui/Button";
 import { getCertificateById } from "@/lib/db/certificates";
 import { getCertificateStatus } from "@/lib/certificate-status";
+import { verifyCertificateOnChain } from "@/lib/certificates/verification";
 import { CertificateStatus } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 
@@ -28,10 +29,11 @@ export default async function VerifyCertificatePage({
 }) {
   const { certificateId } = await params;
   const certificate = await getCertificateById(certificateId);
+  const chainCheck = certificate ? await verifyCertificateOnChain(certificate) : null;
 
   return (
     <div className="flex min-h-screen flex-col">
-      <GradientBackdrop />
+      <GradientBackdrop variant="vivid" />
       <PublicHeader />
       <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6 py-12">
         {!certificate ? (
@@ -66,6 +68,13 @@ export default async function VerifyCertificatePage({
               );
             })()}
 
+            <a
+              href={`/verify/${certificate.certificateId}/pdf`}
+              className={`${buttonBaseClasses} ${variantClasses.primary} ${sizeClasses.md} w-full !justify-center`}
+            >
+              Download Certificate (PDF)
+            </a>
+
             <Card>
               <CardHeader>
                 <CardTitle>Certificate Details</CardTitle>
@@ -73,50 +82,50 @@ export default async function VerifyCertificatePage({
               <CardBody>
                 <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                       Recipient
                     </dt>
-                    <dd className="mt-1 text-sm text-slate-900">
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
                       {certificate.recipientName}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                       Certificate Title
                     </dt>
-                    <dd className="mt-1 text-sm text-slate-900">
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
                       {certificate.certificateTitle}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                       Issuing Organization
                     </dt>
-                    <dd className="mt-1 text-sm text-slate-900">
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
                       {certificate.organizationName}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                       Certificate ID
                     </dt>
-                    <dd className="mt-1 font-mono text-sm text-slate-900">
+                    <dd className="mt-1 font-mono text-sm font-semibold text-slate-950">
                       {certificate.certificateId}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                       Issue Date
                     </dt>
-                    <dd className="mt-1 text-sm text-slate-900">
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
                       {formatDate(certificate.issueDate, "long")}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                       Expiration Date
                     </dt>
-                    <dd className="mt-1 text-sm text-slate-900">
+                    <dd className="mt-1 text-sm font-semibold text-slate-950">
                       {formatDate(certificate.expirationDate, "long")}
                     </dd>
                   </div>
@@ -128,21 +137,34 @@ export default async function VerifyCertificatePage({
               <CardHeader>
                 <CardTitle>Blockchain Verification</CardTitle>
               </CardHeader>
-              <CardBody>
+              <CardBody className="space-y-4">
+                {chainCheck && (
+                  <div
+                    className={`rounded-md border px-3 py-2 text-sm font-medium ${
+                      chainCheck.matched
+                        ? "border-green-200 bg-green-50 text-green-800"
+                        : "border-amber-200 bg-amber-50 text-amber-800"
+                    }`}
+                  >
+                    {chainCheck.matched
+                      ? "This record was independently confirmed on the blockchain — the on-chain data matches PostgreSQL."
+                      : chainCheck.error}
+                  </div>
+                )}
                 <dl className="grid grid-cols-1 gap-4">
                   <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                       Transaction Hash
                     </dt>
-                    <dd className="mt-1 break-all font-mono text-sm text-slate-900">
+                    <dd className="mt-1 break-all font-mono text-sm font-semibold text-slate-950">
                       {certificate.blockchain.transactionHash}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <dt className="text-xs font-semibold uppercase tracking-wider text-slate-700">
                       Blockchain Certificate ID
                     </dt>
-                    <dd className="mt-1 font-mono text-sm text-slate-900">
+                    <dd className="mt-1 font-mono text-sm font-semibold text-slate-950">
                       {certificate.blockchain.blockchainCertId}
                     </dd>
                   </div>
@@ -150,8 +172,8 @@ export default async function VerifyCertificatePage({
               </CardBody>
             </Card>
 
-            <p className="text-center text-sm text-slate-500">
-              <Link href="/verify" className="text-teal-700 hover:text-teal-800">
+            <p className="text-center text-sm font-medium text-slate-700">
+              <Link href="/verify" className="font-semibold text-teal-800 hover:text-teal-950 underline underline-offset-2">
                 Verify another certificate
               </Link>
             </p>
